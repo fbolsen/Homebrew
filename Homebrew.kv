@@ -1,0 +1,58 @@
+#:import Dropdown kivy.uix.dropdown.DropDown
+
+<MyDropDown>:
+    Button:
+        id: btn
+        text: 'Select'
+        on_parent: self.dismiss()
+        on_release: dropdown.open(self)
+        size_hint_y: None
+        height: '48dp'
+    DropDown:
+        id: dropdown
+        on_parent: self.dismiss()
+        on_select: btn.text = '{}'.format(args[1])
+        Button:
+            text: '1'
+            size_hint_y: None
+            height: '48dp'
+            on_release: dropdown.select('First Item')
+        Button:
+            text: '2'
+            size_hint_y: None
+            height: '48dp'
+            on_release: dropdown.select('Secorn Item')
+        Button:
+            text: '3'
+            size_hint_y: None
+            height: '48dp'
+            on_release: dropdown.select('Third Item')
+
+MyBoxLayout:
+    id: bl
+    orientation: 'vertical'
+    BoxLayout:
+        id: bl_top
+        orientation: 'horizontal'
+        CheckBox:
+            id: chk_log_to_file
+            text: 'Log to file:'
+            active: False
+            on_active: root.toggle_log()
+        Button:
+            id: btn_connect
+            text: 'Connect'
+            on_press: root.connect()
+        Button:
+            id: btn_start
+            text: 'Start'
+            on_press: root.start_log()
+        Button:
+            id: btn_stop
+            text: 'Stop'
+            on_press: root.stop_log()
+
+    BoxLayout:
+        id: bl_plot
+    BoxLayout:
+        id: bl_bottom

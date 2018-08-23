@@ -1,0 +1,29 @@
+
+MyBoxLayout:
+    id: bl
+    orientation: 'vertical'
+    BoxLayout:
+        id: bl_top
+        orientation: 'horizontal'
+        CheckBox:
+            id: chk_log_to_file
+            text: 'Log to file:'
+            active: False
+            on_active: root.toggle_log()
+        Button:
+            id: btn_connect
+            text: 'Connect'
+            on_press: root.connect()
+        Button:
+            id: btn_start
+            text: 'Start'
+            on_press: root.start_log()
+        Button:
+            id: btn_stop
+            text: 'Stop'
+            on_press: root.stop_log()
+
+    BoxLayout:
+        id: bl_plot
+    BoxLayout:
+        id: bl_bottom
