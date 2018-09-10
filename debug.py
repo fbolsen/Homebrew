@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import random
+import json
 
 
 
@@ -17,6 +18,11 @@ import random
 
 #    time.sleep(3)
 
+
+
+
+#read credentials from file
+credentials = tl.read_credentials()
 
 
 my_plot = tl.LivePlot()

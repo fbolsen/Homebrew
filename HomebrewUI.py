@@ -1,13 +1,17 @@
 import matplotlib
+import kivy
 matplotlib.use('module://kivy.garden.matplotlib.backend_kivy')
+from kivy.garden.matplotlib.backend_kivyagg import FigureCanvas, NavigationToolbar2Kivy
+#from kivy.garden.matplotlib.backend_kivyagg import FigureCanvasKivyAgg
+
 import matplotlib.pyplot as plt
 
-import kivy
+
+
 from kivy.lang import Builder
 from kivy.app import App
 from kivy.clock import Clock
 #import kivy
-#from kivy.garden.matplotlib.backend_kivyagg import FigureCanvas, NavigationToolbar2Kivy
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.checkbox import CheckBox
 from kivy.uix.dropdown import DropDown
@@ -55,7 +59,7 @@ class HomebrewApp(App):
 
     def build(self):
         print('Build')
-        Builder.load_file('Kivy test.py')
+        Builder.load_file('Homebrew.kv')
         self.root.ids.bl_plot.add_widget(canvas)
 
 
@@ -73,7 +77,7 @@ class HomebrewApp(App):
 
 
 #t_reader = tl.RandomTemp()
-t_reader = tl.Spark_Temp_Sensor(accessToken, deviceID)
+t_reader = tl.ParticleTempSensor(accessToken, deviceID)
 t_plot = tl.LivePlot()
 t_logger = tl.Templogger(source=t_reader, plt=t_plot, freq=30)
 canvas = t_plot.canvas
