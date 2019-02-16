@@ -22,6 +22,7 @@ class LivePlot():
         self._initplot()
         self.temp_min= 20
         self.temp_max = 80
+        self.show_setpoint=True
 
 
     def set_plot_window(self, s):
@@ -35,6 +36,7 @@ class LivePlot():
         freq_str = str(timespan // N) + 'S'
 
         self._temp = []
+        self._setpoint = []
         self._time = []
 
         # dt = self.plot_window
@@ -43,10 +45,12 @@ class LivePlot():
 
         self._time = pd.date_range(start=start_time, periods=N, freq=freq_str).tolist()
         self._temp = [0] * N
+        self._setpoint = [0] * N
 
-        self.df = pd.DataFrame(columns=['time', 'temp'])
+        self.df = pd.DataFrame(columns=['time', 'temp', 'setpoint'])
         self.df['time'] = pd.date_range(start=start_time, periods=N, freq=freq_str)
         self.df['temp'] = [0] * N
+        self.df['setpoint'] = [0] * N
         self.df.index = self.df['time']
 
 
@@ -57,6 +61,7 @@ class LivePlot():
         self.canvas = self.fig.canvas
         # self.ax.plot(self._time, self._temp)
         self.line, = self.ax.plot(self._time, self._temp, lw=2)
+        self.line2, = self.ax.plot(self._time, self._setpoint, lw=2, )
 
 
     def redraw(self):
@@ -79,6 +84,9 @@ class LivePlot():
         self.line.set_xdata(self.df_plot['time'].tolist())
         self.line.set_ydata(self.df_plot['temp'].tolist())
 
+        self.line2.set_xdata(self.df_plot['time'].tolist())
+        self.line2.set_ydata(self.df_plot['setpoint'].tolist())
+
         #self.ax.plot(df_plot['time', df_plot['temp']], lw=2, )
 
         #print(df_plot)
@@ -86,8 +94,7 @@ class LivePlot():
 
         self.fig.canvas.draw()
 
-
-    def update_plot(self, new_time, new_temp):
+    def update_plot(self, new_time, new_temp, setpoint=0.0):
         print('Updating plot')
 
         self.new_time = new_time
@@ -95,8 +102,9 @@ class LivePlot():
 
         self._time.append(new_time)
         self._temp.append(new_temp)
+        self._setpoint.append(setpoint)
 
-        self.df.loc[new_time] = [new_time, new_temp]
+        self.df.loc[new_time] = [new_time, new_temp, setpoint]
 
         self.redraw()
 
@@ -158,6 +166,7 @@ class Templogger():
         self._plot=plt
         self.log_fn = ''
         self.log_to_file = False
+        self.temp = 0
 
 
     def stop_logging(self):
@@ -211,15 +220,15 @@ class Templogger():
             time.sleep(self.freq)
             #print(time.time())
             t = datetime.now()
-            temp = self._t_source.temp()
+            self.temp = self._t_source.temp()
 
             if self.log_to_file:
                 with open(self.log_fn, mode='a') as f:
-                    f.write('{0:%Y-%m-%d %H:%M:%S},{1:.2f}'.format(t, temp) + ',\n')
+                    f.write('{0:%Y-%m-%d %H:%M:%S},{1:.2f}'.format(t, self.temp) + ',\n')
 
-            print('{0:%Y-%m-%d %H:%M:%S},{1:.2f}'.format(t, temp))
+            print('{0:%Y-%m-%d %H:%M:%S},{1:.2f}'.format(t, self.temp))
 
-            self._plot.update_plot(t, temp)
+            self._plot.update_plot(t, self.temp)
 
         print('read_temps stopping')
 

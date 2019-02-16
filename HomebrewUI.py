@@ -1,7 +1,10 @@
 import matplotlib
 import kivy
+from datetime import datetime
+from kivy.clock import Clock
 matplotlib.use('module://kivy.garden.matplotlib.backend_kivy')
 from kivy.garden.matplotlib.backend_kivyagg import FigureCanvas, NavigationToolbar2Kivy
+from kivy.properties import NumericProperty
 #from kivy.garden.matplotlib.backend_kivyagg import FigureCanvasKivyAgg
 
 import matplotlib.pyplot as plt
@@ -31,6 +34,8 @@ deviceID = "23001e000947353138383138"
 class MyDropDown(DropDown):
     pass
 
+
+
 class MyBoxLayout(BoxLayout):
 
     #t_reader = tl.Tempreader()
@@ -48,27 +53,35 @@ class MyBoxLayout(BoxLayout):
 
     def start_log(self):
         print('Start log')
-        t_logger.start_loging()
+        #t_logger.start_loging()
 
     def stop_log(self):
         print('Stop log')
-        t_logger.stop_logging()
+        #t_logger.stop_logging()
 
 
 class HomebrewApp(App):
 
     def build(self):
         print('Build')
-        Builder.load_file('Homebrew.kv')
+        Builder.load_file('HomebrewUI.kv')
+        Clock.schedule_interval(self.update,1)
         self.root.ids.bl_plot.add_widget(canvas)
 
 
     def update(self, dt): #dt is delta time between each call
-        b =self.root.ids.btn_1
+
+        b =self.root.ids.lbl_temp
         if b.text == 'tick':
             b.text = 'tack'
         else:
             b.text = 'tick'
+
+
+        new_temp = t_reader.temp()
+        timestamp = datetime.now()
+
+        t_plot.update_plot(timestamp, new_temp)
 
     def update_plot(self, dt):
         #update plot
@@ -76,10 +89,10 @@ class HomebrewApp(App):
 
 
 
-#t_reader = tl.RandomTemp()
-t_reader = tl.ParticleTempSensor(accessToken, deviceID)
+t_reader = tl.RandomTemp()
+#t_reader = tl.ParticleTempSensor(accessToken, deviceID)
 t_plot = tl.LivePlot()
-t_logger = tl.Templogger(source=t_reader, plt=t_plot, freq=30)
+#t_logger = tl.Templogger(source=t_reader, plt=t_plot, freq=30)
 canvas = t_plot.canvas
 
 

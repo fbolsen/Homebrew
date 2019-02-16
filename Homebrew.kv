@@ -1,58 +1,65 @@
-#:import Dropdown kivy.uix.dropdown.DropDown
+#:kivy 1.0.9
 
-<MyDropDown>:
-    Button:
-        id: btn
-        text: 'Select'
-        on_parent: self.dismiss()
-        on_release: dropdown.open(self)
-        size_hint_y: None
-        height: '48dp'
-    DropDown:
-        id: dropdown
-        on_parent: self.dismiss()
-        on_select: btn.text = '{}'.format(args[1])
-        Button:
-            text: '1'
-            size_hint_y: None
-            height: '48dp'
-            on_release: dropdown.select('First Item')
-        Button:
-            text: '2'
-            size_hint_y: None
-            height: '48dp'
-            on_release: dropdown.select('Secorn Item')
-        Button:
-            text: '3'
-            size_hint_y: None
-            height: '48dp'
-            on_release: dropdown.select('Third Item')
 
-MyBoxLayout:
+<TempWidget>:
+    orientation: 'horizontal'
+    #size_hint: (1.0, 0.2)
+    BoxLayout:
+        orientation: 'vertical'
+        size_hint: (None, 1.0)
+        width: 100
+        Button:
+            text: 'Up:'
+            on_press: root.up()
+        Button:
+            text: 'Down'
+            on_press: root.down()
+    BoxLayout:
+        orientation: 'vertical'
+        Label:
+            text: 'Target:'
+        Label:
+            id: lbl_setpoint
+            text: str(root.setpoint)
+    BoxLayout:
+        orientation: 'vertical'
+        Label:
+            text: 'Temp:'
+        Label:
+            id: lbl_temp
+            text: str(root.temp)
+
+<Homebrew>:
     id: bl
     orientation: 'vertical'
+    temp_widget: temp_w
     BoxLayout:
         id: bl_top
         orientation: 'horizontal'
-        CheckBox:
-            id: chk_log_to_file
-            text: 'Log to file:'
-            active: False
-            on_active: root.toggle_log()
+        size_hint: (1.0, 0.1)
         Button:
             id: btn_connect
             text: 'Connect'
             on_press: root.connect()
         Button:
             id: btn_start
-            text: 'Start'
-            on_press: root.start_log()
+            text: 'Start mash'
+            on_press: root.start_mash()
         Button:
             id: btn_stop
-            text: 'Stop'
-            on_press: root.stop_log()
-
+            text: 'Stop mash'
+            on_press: root.stop_mash()
+    BoxLayout:
+        size_hint: (1.0, 0.1)
+        #Label:
+        #    text: 'Temps'
+        TempWidget:
+            id: temp_w
     BoxLayout:
         id: bl_plot
+        size_hint: (1.0, 0.5)
     BoxLayout:
         id: bl_bottom
+        size_hint: (None, 0.1)
+        Label:
+            text: 'Buttom'
