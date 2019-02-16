@@ -153,9 +153,45 @@ class RandomTemp():
         return random.random()*(max-min) + min
 
 
-    def temp(self):
+    def get_temp(self):
         time.sleep(self.sleep_time)
         return self.random_temp()
+
+class MashTun():
+
+    last_update = time.time()
+
+    def __init__(self):
+        self.volume = 25.0
+        self.cp = 4180 #J/(K*kg)
+        self.temp = 20.0
+        self.max_power = 3500.0
+        self.loss_factor = 1.0/60 #1 degree per minute and degree
+        self.ambient_temp = 20.0
+        self.last_update = time.time()
+        self.power = 0.0
+
+
+
+    def get_temp(self):
+
+        now = time.time()
+        dt = now - self.last_update
+        self.last_update = now
+
+        current_temp = self.temp
+        added_temp = (self.max_power*self.power*dt)/(self.cp*self.volume)
+        lost_temp = (current_temp-self.ambient_temp)*self.loss_factor*dt
+
+        self.temp = current_temp + added_temp - lost_temp
+
+        if self.temp > 100.0:
+            self.temp = 100.0
+        if self.temp < 1.0:
+            self.temp = 1.0
+
+        return self.temp
+
 
 
 class Templogger():
