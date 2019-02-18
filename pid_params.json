@@ -1,8 +1,0 @@
-{
-	"Kp": 5.0,
-	"Ki": 0.1,
-    "Kd": 1.0,
-	"sample_time": 1.0,
-	"output_min": 0.0,
-	"outpu_max": 100.0
-}

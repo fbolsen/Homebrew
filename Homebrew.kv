@@ -27,12 +27,96 @@
             text: 'Temp:'
         Label:
             id: lbl_temp
-            text: str(root.temp)
+            text: "{0:.2f}".format(root.temp)
+
+<PIDWidget>:
+    #orientation: 'horizontal'
+    #size_hint: (None, 1.0)
+    #BoxLayout:
+    orientation: 'vertical'
+    size_hint: (None, 1.0)
+    width: 800
+    BoxLayout:
+    
+    
+        Label:
+            text: 'Kp:'
+        Label:
+            id: lbl_Kp
+            text: "{0:.6g}".format(root.Kp)
+        Slider:
+            id: sl_Kp
+            min: 0.0
+            max: 100.0
+            value: 5.0
+            on_value: root.update_Kp()
+    BoxLayout:
+        Label:
+            text: 'Ki:'
+        Label:
+            id: lbl_Ki
+            text: "{0:.6g}".format(root.Ki)
+        Slider:
+            id: sl_Ki
+            min: 0.0
+            max: 100.0
+            value: 25.0
+            on_value: root.update_Ki()
+    BoxLayout:
+        Label:
+            text: 'Kd:'
+        Label:
+            id: lbl_Kd
+            text: "{0:.6g}".format(root.Kd)
+        Slider:
+            id: sl_Kd
+            min: 0.0
+            max: 100.0
+            value: 25.0
+            on_value: root.update_Kd()
+    Button:
+        id: pid_reset
+        text: 'Reset'
+        on_press: root.pid_reset()
+
+
+<PWMWidget>:
+    orientation: 'vertical'
+    #width: 800
+    #size_hint: (None, 1.0)
+
+    #BoxLayout:
+        #orientation: 'horizontal'
+        ##size_hint: (None, 1.0)
+        #width: 800
+    BoxLayout:
+        orientation: 'horizontal'
+        Label:
+            text: 'Override PID:'
+        CheckBox:
+            id: chk_override
+            text: 'Override PID'
+
+    Label:
+        text: 'Power'
+    Label:
+        id: lbl_power
+        text: "{0:.2f}".format(root.power)
+    Slider:
+        id: sl_power
+        min: 0.0
+        max: 100.0
+        value: root.power
+        on_value: root.update_power()
+
+
 
 <Homebrew>:
     id: bl
     orientation: 'vertical'
     temp_widget: temp_w
+    pid_widget: pid_w
+    pwm_widget: pwm_w
     BoxLayout:
         id: bl_top
         orientation: 'horizontal'
@@ -59,7 +143,10 @@
         id: bl_plot
         size_hint: (1.0, 0.5)
     BoxLayout:
+        orientation: 'horizontal'
         id: bl_bottom
-        size_hint: (None, 0.1)
-        Label:
-            text: 'Buttom'
+        size_hint: (1.0, 0.1)
+        PIDWidget:
+            id: pid_w
+        PWMWidget:
+            id: pwm_w

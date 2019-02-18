@@ -60,8 +60,8 @@ class LivePlot():
         self.fig, self.ax = plt.subplots()
         self.canvas = self.fig.canvas
         # self.ax.plot(self._time, self._temp)
-        self.line, = self.ax.plot(self._time, self._temp, lw=2)
-        self.line2, = self.ax.plot(self._time, self._setpoint, lw=2, )
+        self.line, = self.ax.plot(self._time, self._temp, lw=5)
+        self.line2, = self.ax.plot(self._time, self._setpoint, lw=5, )
 
 
     def redraw(self):
@@ -163,10 +163,10 @@ class MashTun():
 
     def __init__(self):
         self.volume = 25.0
-        self.cp = 4180 #J/(K*kg)
-        self.temp = 20.0
-        self.max_power = 3500.0
-        self.loss_factor = 1.0/60 #1 degree per minute and degree
+        self.cp = 4180 #[J/(K*kg)]
+        self.temp =    10.0 #[C]
+        self.max_power = 3500.0 #[W]
+        self.loss_factor = 0.5/60 # 0.5 degree per minute
         self.ambient_temp = 20.0
         self.last_update = time.time()
         self.power = 0.0
@@ -180,6 +180,7 @@ class MashTun():
         self.last_update = now
 
         current_temp = self.temp
+        #max pwerer is multiplied with 100 to speed up simulation
         added_temp = (self.max_power*self.power*dt)/(self.cp*self.volume)
         lost_temp = (current_temp-self.ambient_temp)*self.loss_factor*dt
 
@@ -192,7 +193,30 @@ class MashTun():
 
         return self.temp
 
+class LogFile():
 
+    def __init__(self):
+        self.log_path = './logfiles/'
+
+    def start_logging(self):
+        self.log_fn = self.log_path + strftime("%Y-%m-%dT%H%M%S", gmtime()) + ".csv"
+        self._write_headers(self.log_fn)
+        print('Logging to file: ' + self.log_fn)
+        pass
+
+    def _write_headers(self, fn):
+        headers = ['timestamp', 'temp', 'setpoint', 'power', 'comment']
+        with open(fn, mode='w') as f:
+            f.write(','.join(headers) + '\n')
+
+    def write_to_log(self, timestamp, temp, setpoint, power, comment):
+
+        with open(self.log_fn, mode='a') as f:
+            f.write('{0:%Y-%m-%d %H:%M:%S},{1:.2f}, {2:.2f}, {3:.2f}, {4:s}'.format(timestamp, temp, setpoint, power, comment) + ',\n')
+
+
+    def stop_logging(self):
+        print('Logging stopped')
 
 class Templogger():
 
