@@ -1,5 +1,23 @@
 #:kivy 1.0.9
 
+<TimeWidget>:
+    orientation: 'vertical'
+    ToggleButton:
+        group: 'mygroup'
+        text: 'time'
+        id: tgl_time
+        on_press: root.set_mode(self.text)
+    ToggleButton:
+        group: 'mygroup'
+        text: 'elapsed'
+        on_press: root.set_mode(self.text)
+    ToggleButton:
+        group: 'mygroup'
+        text: 'remaining'
+        on_press: root.set_mode(self.text)
+    Label:
+        id: lbl_time
+        text: '12:00'
 
 <TempWidget>:
     orientation: 'horizontal'
@@ -117,6 +135,7 @@
     temp_widget: temp_w
     pid_widget: pid_w
     pwm_widget: pwm_w
+    time_widget: time_w
     BoxLayout:
         id: bl_top
         orientation: 'horizontal'
@@ -139,6 +158,8 @@
         #    text: 'Temps'
         TempWidget:
             id: temp_w
+        TimeWidget:
+            id: time_w
     BoxLayout:
         id: bl_plot
         size_hint: (1.0, 0.5)
