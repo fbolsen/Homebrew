@@ -31,9 +31,6 @@ import temp_logger as tl
 accessToken = "6d6873caba909d7f00dde47440fe7933e65582e6"
 deviceID = "23001e000947353138383138"
 
-class MyDropDown(DropDown):
-    pass
-
 
 
 class MyBoxLayout(BoxLayout):
