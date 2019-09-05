@@ -99,41 +99,45 @@
 
 <PWMWidget>:
     orientation: 'vertical'
+
     BoxLayout:
         orientation: 'horizontal'
+        Label:
+            text: 'test'
+            size_hint_x: 0.8
         CheckBox:
             id: chk_override
             text: 'Override PID'
+            size_hint_x: 0.2
             on_press: root.toggle()
             canvas.before:
                 #Color:
                 #    rgba: 1, .5, 0, 1
-                Rectangle:
-                    pos: self.pos
-                    size: self.size
-
-    Label:
-        text: 'Power'
-        canvas.before:
-            #Color:
-            #    rgba: 1, .5, 0, 1
-            Rectangle:
-                pos: self.pos
-                size: self.size
-    Label:
-        id: lbl_power
-        text: "{0:.2f}".format(root.power)
-        #background_normal: ''
-        #background_color: 1,1,0,1
-        #color: 0,1,0,1 #text color
+                #Rectangle:
+                #    pos: self.pos
+                #    size: self.size
     BoxLayout:
         orientation: 'horizontal'
-        Slider:
-            id: sl_power
-            min: 0.0
-            max: 100.0
-            value: root.power
-            on_value: root.update_power()
+        Label:
+            text: 'Power:'
+            #canvas.before:
+                #Color:
+                #    rgba: 1, .5, 0, 1
+            #    Rectangle:
+            #        pos: self.pos
+            #        size: self.size
+        Label:
+            id: lbl_power
+            text: "{0:.2f}".format(root.power)
+            #background_normal: ''
+            #background_color: 1,1,0,1
+            #color: 0,1,0,1 #text color
+    Slider:
+        id: sl_power
+        min: 0.0
+        max: 100.0
+        value: root.power
+        on_value: root.update_power()
 
 
 
@@ -176,6 +180,18 @@
     BoxLayout:
         id: bl_plot
         size_hint: (1.0, 0.5)
+        BoxLayout:
+            orientation: 'vertical'
+            size_hint_x: 0.1
+            Label:
+                text: 'Auto on/off'
+            Switch:
+                id: sw_auto
+                on_active: root.auto_scale(self, self.active)
+            TextInput:
+                id: txt_max
+            TextInput:
+                id: txt_min
     BoxLayout:
         orientation: 'horizontal'
         id: bl_bottom
