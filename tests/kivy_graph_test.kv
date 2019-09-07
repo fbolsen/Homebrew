@@ -1,0 +1,16 @@
+<MyGraph>:
+
+<MyBoxLayout>:
+    orientation: 'vertical'
+    MyGraph:
+        id: temp_graph
+    BoxLayout:
+        orientation: 'horizontal'
+        Button:
+            id: btn_start
+            text: 'Start'
+            on_press: root.start()
+        Button:
+            id: btn_stop
+            text: 'Stop'
+            on_press: root.stop()
