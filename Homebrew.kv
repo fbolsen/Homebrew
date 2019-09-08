@@ -1,4 +1,6 @@
 #:kivy 1.0.9
+<MyGraph>:
+
 
 <TimeWidget>:
     orientation: 'vertical'
@@ -148,6 +150,23 @@
     pid_widget: pid_w
     pwm_widget: pwm_w
     time_widget: time_w
+    app_mode: 'Simulation mode'
+
+    BoxLayout:
+        size_hint: (1.0, 0.1)
+        ToggleButton:
+            text: 'Simulation mode'
+            group: 'mode'
+            state: 'down'
+            on_press: root.change_appmode(self.text)
+        ToggleButton:
+            text: 'Particle cloud'
+            group: 'mode'
+            on_press: root.change_appmode(self.text)
+        ToggleButton:
+            text: 'Particle USB/Serial'
+            group: 'mode'
+            on_press: root.change_appmode(self.text)
     BoxLayout:
         id: bl_top
         orientation: 'horizontal'
@@ -192,6 +211,8 @@
                 id: txt_max
             TextInput:
                 id: txt_min
+        MyGraph:
+            id: temp_graph
     BoxLayout:
         orientation: 'horizontal'
         id: bl_bottom

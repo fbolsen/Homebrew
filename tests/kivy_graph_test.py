@@ -46,6 +46,8 @@ class MyBoxLayout(BoxLayout):
         print('temp = ', t)
         print('time = ', temp)
 
+        self.ids['temp_graph'].update_plot(t, temp, 20.0)
+
 class MyGraph(Graph):
     def __init__(self, **kwargs):
         super(MyGraph, self).__init__(**kwargs)
@@ -86,6 +88,13 @@ class MyGraph(Graph):
 
     def redraw(self):
         print('redraw')
+        self.time_min = self.new_time - self.plot_window
+        self.time_max = self.new_time
+
+        self.df_plot = self.df[self.time_min:self.time_max]
+
+        self.plot.points = self.df_plot['temp'].tolist()
+        #self.df_plot['time'].tolist())
 
     def update_plot(self, new_time, new_temp, setpoint=0.0):
         print('Updating plot')
