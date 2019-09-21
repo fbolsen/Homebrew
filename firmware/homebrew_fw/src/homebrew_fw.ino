@@ -2,6 +2,9 @@
 #include "spark-dallas-temperature.h"
 
 
+const size_t READ_BUF_SIZE = 64;
+const unsigned long CHAR_TIMEOUT = 3000;
+
 const long interval = 1000;           // interval at which to blink (milliseconds)
 const int ledPin =  D6;// the number of the LED pin
 const int minPeriod = 100;
@@ -12,7 +15,14 @@ const int dutyCycleMillisMin = 10;
 
 const int tempSensorPin = D2;
 
+
+// Global variables
+char readBuf[READ_BUF_SIZE];
+size_t readBufOffset = 0;
+unsigned long lastCharTime = 0;
+
 bool doPWM = FALSE;
+bool doReadSerial = TRUE;
 int doPWM_int = 0;
 
 int period = 1000;
@@ -24,6 +34,7 @@ double tempC = 0.0;
 int counter = 0;
 int ledState = LOW;             // ledState used to set the LED
 unsigned long previousMillis = 0;        // will store last time LED was updated
+
 
 
 
@@ -55,10 +66,12 @@ void setup() {
   Particle.variable("doPWM", &doPWM_int, INT);
 
   Serial.begin(9600);
+  Serial.setTimeout(1000);
 
   sensors.begin();
   sensors.getAddress(tempDeviceAddress, 0);
-  //sensors.setResolution(tempDeviceAddress, resolution);
+  sensors.setResolution(tempDeviceAddress, 10);
+
   sensors.setWaitForConversion(FALSE);
   sensors.requestTemperatures();
 
@@ -67,9 +80,16 @@ void setup() {
 
 int requestTemp(String s) {
 
-  //tempC = sensors.getTempCByIndex(0);
-  sensors.requestTemperatures();
   tempC = sensors.getTempCByIndex(0);
+  sensors.requestTemperatures();
+  //tempC = sensors.getTempCByIndex(0);
+
+  Serial.printlnf("tempC = %f", tempC);
+
+  //Serial.print("Sensor Resolution: ");
+  //Serial.println(sensors.getResolution(tempDeviceAddress), DEC);
+  //Serial.println();
+
 }
 
 void setDutyCycleMillis() {
@@ -81,6 +101,7 @@ void setDutyCycleMillis() {
   if (dutyCycleMillis > period) {
       dutyCycleMillis = period;
   }
+  Serial.printlnf("dutyCycleMillis = %d", dutyCycleMillis);
 }
 
 int setPeriod(String p) {
@@ -92,12 +113,13 @@ int setPeriod(String p) {
     } else if (period > maxPeriod) {
         period = maxPeriod;
     }
-
+    Serial.printlnf("period = %f", period);
     setDutyCycleMillis();
 
 }
 
 int setDutyCycle(String p) {
+    //Serial.printlnf("dutyCycle str = %s", p.c_str());
 
     dutyCycle = p.toInt(); //this return zero if p cannot be converted
     // ensure that period is between bounds
@@ -107,7 +129,8 @@ int setDutyCycle(String p) {
         dutyCycle = maxDutyCycle;
     }
 
-    setDutyCycleMillis();
+    Serial.printlnf("dutyCycle int = %d", dutyCycle);
+    //setDutyCycleMillis();
 }
 
 
@@ -130,43 +153,102 @@ int stop (String s) {
 
 }
 
+int readSerial(String s) {
+
+    int i=0;
+    String mystr = "";
+
+    Serial.printlnf("Entering readSerial!");
+
+    if (s.startsWith("start")) {
+      Serial.printlnf("Found start!");
+      start("1");
+    }
+    else if (s.startsWith("stop")) {
+      Serial.printlnf("Found stop!");
+      stop("1");
+    }
+    else if (s.startsWith("setPeriod")) {
+      Serial.printlnf("Found setPeriod!");
+      //parse to get value
+      //find "="
+      i = s.indexOf("=");
+      if (i>-1) {
+        Serial.printlnf("Found = at %d", i);
+        mystr = s.substring(i+1);
+        Serial.printlnf("mystr = %s", mystr.c_str());
+        setPeriod(mystr);
+      }
+    }
+    else if (s.startsWith("setDutyCycle")) {
+      Serial.printlnf("Found setDutyCycle!");
+      i = s.indexOf("=");
+      if (i>-1) {
+        Serial.printlnf("Found = at %d", i);
+        mystr = s.substring(i+1);
+        Serial.printlnf("mystr = %s", mystr.c_str());
+        //value = mystr.trim().toInt();
+        //Serial.printlnf("Value = %d", value);
+        setDutyCycle(mystr.c_str());
+      }
+    }
+    else
+    {
+      Serial.printlnf("Command not recognised: %s", s.c_str());
+    }
+
+
+}
+
 void loop() {
 
-    unsigned long currentMillis = millis();
     unsigned long delta = 0;
-    //unsigned long onTime = 0;
-    //unsigned long offTime = 0;
+    unsigned long currentMillis = millis();
 
-    //if (!Particle.connected()) {
-    //  doPWM = FALSE;
-    //  ledState = LOW;
-    //  Serial.printlnf("Not connected to cloud - doPWM = FALSE!");
-    //}
-
-
-    //Serial.print(doPWM_int);
-
-    if (doPWM) {
-
-        delta = currentMillis - previousMillis;
-        //Serial.printlnf("delta = %d", delta);
-
-        if (delta  <=  dutyCycleMillis) {
-            ledState = HIGH;
-        } else {
-            ledState = LOW;
+    // Read data from serial
+    while(Serial.available()) {
+        if (readBufOffset < READ_BUF_SIZE) {
+            char c = Serial.read();
+            if (c != '\n') {
+                // Add character to buffer
+                readBuf[readBufOffset++] = c;
+                lastCharTime = millis();
+            }
+            else {
+                // End of line character found, process line
+                readBuf[readBufOffset] = 0;
+                Serial.printlnf("got: %s", readBuf);
+                readSerial(String(readBuf));
+                readBufOffset = 0;
+            }
         }
-        digitalWrite(ledPin, ledState);
-
-        if (delta >= period) {
-
-          //tempC = sensors.getTempCByIndex(0);
-
-          // save the  time of the last period
-          previousMillis = currentMillis;
-            // set the LED with the ledState of the variable:
-            //digitalWrite(ledPin, ledState);
+        else {
+            Serial.println("readBuf overflow, emptying buffer");
+            readBufOffset = 0;
         }
+    }
+
+    if (currentMillis - lastCharTime >= CHAR_TIMEOUT) {
+        lastCharTime = millis();
+        readBuf[readBufOffset] = 0;
+        //Serial.printlnf("got timeout: %s", readBuf);
+        Serial.printlnf("{\"doPWM\":%d, \"dutyCycle\":%d, \"period\":%d}", doPWM, dutyCycle, period);
+        readBufOffset = 0;
+    }
+
+    delta = currentMillis - previousMillis;
+
+    if (doPWM && (delta  <=  dutyCycleMillis)) {
+        ledState = HIGH;
+    } else {
+        ledState = LOW;
+    }
+    digitalWrite(ledPin, ledState);
+
+    if (delta >= period) {
+      requestTemp("");
+      previousMillis = currentMillis;
 
     }
+
 }

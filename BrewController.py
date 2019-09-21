@@ -1,11 +1,13 @@
-import threading
 import json
 import requests
-import random
-import time
 import math
+import serial
+import threading
+import ast
+import re
 
-from abc import ABCMeta , abstractmethod
+
+from abc import ABCMeta, abstractmethod
 
 
 MIN_PERIOD = 1000 #in ms
@@ -15,12 +17,13 @@ DEFAULT_PERIOD = 2000 #in ms
 MIN_POWER = 0 #in percent
 MAX_POWER = 100
 
-BASE_URL = "https://api.spark.io/v1/devices"
+BASE_URL = "https://api.particle.io/v1/devices"
+
 
 class BaseClass(metaclass=ABCMeta):
 
     @abstractmethod
-    def connect(self, accessToken='', deviceID=''):
+    def connect(self, accessToken='', deviceID='', port='', timeout=0):
         pass
 
     @abstractmethod
@@ -64,8 +67,169 @@ class BaseClass(metaclass=ABCMeta):
     def power(self, value):
         pass
 
+class ParticleSerial():
 
-class Particle():
+    def __init__(self):
+
+        self._accessToken = ''
+        self._deviceId = ''
+        self._connected = False
+        self._running = False
+        self._period = DEFAULT_PERIOD
+        self._power = MIN_POWER
+        self._temp = 0
+        self.listenSerial = False
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        try:
+            print('Closing serial connection ', self.serial.name())
+            self.serial.close()
+        except:
+            pass
+
+    def _listener(self):
+        print('Starting _listener!')
+        while self.serial.is_open:
+            self.serial.timeout = 3
+            try:
+                line = self.serial.readline()
+                result = line.decode()
+            except:
+                print('Listener could not decode : ', line)
+            print("Read from serial : ", result)
+
+            #parse the string
+            i = result.find("tempC = ")
+            if i>=0:
+                try:
+                    value = re.findall("\d+\.\d+", result)
+                    print("Temp = ", value[0])
+                    self._temp = float(value[0])
+                except ValueError:
+                    print('Coud not parse: ', result)
+                    self._temp = -127.0
+            i = result.find("{")
+            if  i>=0:
+                print("Status : ", result)
+
+
+
+    def connect(self, accessToken='', deviceID='', port='', timeout=1):
+        #try:
+        print('Attempting to connect to serial: ', port)
+        ser = serial.Serial(port=port, timeout=timeout)
+        self.serial = ser
+        self.serial_name = ser.name
+        self.listenSerial = True
+        self.serialThread = threading.Thread(name='listener', target=self._listener)
+        self.serialThread.daemon=True
+        self.serialThread.start()
+        print('Successfully connected to : ', ser.name)
+        return True, 'All well!'
+        #except:
+        #    raise Exception('Could not connect to serial port: ', port)
+
+
+
+    def __readVariable(self, varName=''):
+        cmd = 'get ' + varName + '\r\n'
+        self.serial.write(cmd.encode())
+
+        while True:
+            line = self.serial.readline()
+            result = line.find(varName + '=')
+            if result != -1:
+                #this means 'varablename=' is found
+                #now find =
+                startpos = line.find('=')
+                value = line[startpos:]
+                return float(value)
+                break
+
+
+    def __callFunction(self, funcName='', params=''):
+        if len(params) > 0:
+            cmd = funcName + '=' + params + '\r\n'
+        else:
+            cmd = funcName + '\r\n'
+        print('Sending command :', cmd)
+        self.serial.write(cmd.encode())
+
+    def updateTemp(self):
+
+        try:
+            result = self.__callFunction(funcName='RequestTemp', params='dummy')
+        except:
+            raise ValueError()
+        return result
+
+    def readTemp(self):
+        #result = self.__readVariable(varName='tempC')
+        #self._temp = result
+
+        return self._temp
+
+    @property
+    def is_connected(self):
+        # todo add code to check if particle is connected
+        return self._connected
+
+    @property
+    def is_running(self):
+        return self._running
+
+    def stop(self):
+        try:
+            self.__callFunction(funcName='Stop', params='dummy')
+        except:
+            raise ValueError()
+
+        self._running = False
+
+
+
+    def start(self):
+        if not self._running:
+            try:
+                self.__callFunction(funcName='start')
+                self._running = True
+            except:
+                raise ValueError()
+        else:
+            print('Already running!')
+
+    @property
+    def period(self):
+        result = self.__readVariable(varName='period')
+        self._period = result
+
+        return self._period
+
+    @period.setter
+    def period(self, value):
+        # todo check value boundaries
+        strValue = str(value)
+
+        self.__callFunction(funcName='setPeriod', params=strValue)
+
+    @property
+    def power(self):
+        result = self.__readVariable(varName='dutyCycle')
+        self._power = result
+
+        return self._power
+
+    @power.setter
+    def power(self, value):
+
+        if 0 <= value <= 100:
+            strValue = str(int(value))
+            self.__callFunction(funcName='setDutyCycle', params=strValue)
+        else:
+            raise ValueError
+
+
+class ParticleCloud():
 
 
     def __init__(self):
@@ -85,6 +249,7 @@ class Particle():
         variablesOK = False
         functionsOK = False
         connectedOK = False
+        answer = ''
 
         #read the credentials
         self._accessToken = accessToken
@@ -146,7 +311,7 @@ class Particle():
         print('allOK = ', allOK)
 
 
-        return allOK
+        return allOK, answer
 
 
     def updateTemp(self):
@@ -156,7 +321,6 @@ class Particle():
         except:
             raise ValueError()
         return result
-
 
     def readTemp(self):
 
@@ -171,7 +335,7 @@ class Particle():
 
     def __callFunction(self, funcName='', params='dummy'):
 
-        url = "https://api.spark.io/v1/devices/" + self._deviceId + "/" + funcName
+        url = "https://api.particle.io/v1/devices/" + self._deviceId + "/" + funcName
         payLoad = {"access_token": self._accessToken, "params": params}
 
         print('Calling function ', funcName)
@@ -190,7 +354,7 @@ class Particle():
 
     def __readVariable(self, varName=''):
 
-        baseUrl = "https://api.spark.io/v1/devices"
+        baseUrl = "https://api.particle.io/v1/devices"
         url = baseUrl + '/' + self._deviceId + '/' + varName
 
         #print('Reading variable ', varName)
@@ -278,21 +442,24 @@ class Simulator(BaseClass):
     def connect(self, accessToken='', deviceID=''):
 
         time.sleep(1)
-        return True
+        self._connected = True
+        message = 'Simulator: Connection request succeeded'
+
+        return True, message
 
     def updateTemp(self):
         return {'ok':True}
 
     def readTemp(self):
 
-        period = 20
-        amplitude = 5
-        base = 30
+        period = 20 #period in seconds
+        amplitude = 5 #AC amplitude
+        base = 30 #DC amplitude
 
         phase = math.remainder(time.time(), period) / period
-        sin = math.sin(2*math.pi*phase)
+        value = math.sin(2*math.pi*phase)
 
-        result = base + amplitude*phase
+        result = base + amplitude*value
         self._temp = result
         return result
 
@@ -325,4 +492,31 @@ class Simulator(BaseClass):
     @power.setter
     def power(self, value):
         self._power = value
+
+
+if __name__ == '__main__':
+
+    import time
+
+    def read_credentials(fn):
+        with open(fn) as f:
+            data = json.load(f)
+        return data
+
+
+    credentials_fn = "/Users/frodebergolsen/Dropbox/PycharmProjects/Homebrew/particle credentials.json"
+    credentials = read_credentials(credentials_fn)
+    accessToken = credentials["accessToken"]
+    deviceID = credentials["deviceID"]
+
+    #BC = ParticleCloud()
+    BC = ParticleSerial()
+    #result, msg = BC.connect(accessToken=accessToken, deviceID=deviceID)
+    #print('Result : ', result)
+    #print('Message: ', msg)
+
+    port = "/dev/tty.usbmodem14301"
+
+    result = BC.connect(port=port)
+
 

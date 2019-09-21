@@ -1,4 +1,9 @@
 from kivy.app import App
+
+from kivy.config import Config
+Config.set('graphics', 'width', '1200')
+Config.set('graphics', 'height', '900')
+
 from kivy.core.window import Window
 
 from kivy.graphics import Color
@@ -11,7 +16,7 @@ from kivy.clock import Clock
 from kivy.uix.textinput import TextInput
 from kivy.uix.slider import Slider
 from kivy_garden.graph import Graph, LinePlot, MeshLinePlot
-from kivy.garden.knob import Knob
+#from kivy.garden.knob import Knob
 from kivy.uix.checkbox import CheckBox
 
 # todo: add logging
@@ -46,9 +51,12 @@ credentials_fn = "particle credentials.json"
 credentials = tl.read_credentials()
 accessToken = credentials["accessToken"]
 deviceID = credentials["deviceID"]
+port = '/dev/tty.usbmodem14301'
 
 #controller = BC.Particle()
-controller = BC.Simulator()
+#controller = BC.Simulator()
+controller = BC.ParticleSerial()
+#controller = object()
 
 
 
@@ -76,7 +84,6 @@ class MyGraph(Graph):
         self._initplot()
         self.temp_min = 20
         self.temp_max = 80
-        self.show_setpoint = True
 
     def set_plot_window(self, s):
         pass
@@ -107,7 +114,7 @@ class MyGraph(Graph):
         self.df.index = self.df['time']
 
     def redraw(self):
-        print('redraw')
+        #print('redraw')
         self.time_min = self.new_time - self.plot_window
         self.time_max = self.new_time
 
@@ -118,12 +125,16 @@ class MyGraph(Graph):
         plot_data = list(zip(x, self._temp[-N:]))
         self.plot.points = plot_data
 
+        if self.show_setpoint:
+            setpoint_data = list(zip(x, self._setpoint[-N:]))
+            self.setpoint_plot.points = setpoint_data
+
 
 
         #self.df_plot['time'].tolist())
 
     def update_plot(self, new_time, new_temp, setpoint=0.0):
-        print('MyGraph::Updating plot')
+        #print('MyGraph::Updating plot')
 
         self.new_time = new_time
         self.new_temp = new_temp
@@ -146,7 +157,7 @@ class MyGraph(Graph):
         self.ylabel = 'Y'
         self.x_ticks_minor = 5
         self.x_ticks_major = 25
-        self.y_ticks_major = 1
+        self.y_ticks_major = 10
         self.y_grid_label = True
         self.x_grid_label = True
         self.padding = 5
@@ -156,14 +167,23 @@ class MyGraph(Graph):
         self.xmax = self._num_datapoints
         self.ymin = 0
         self.ymax = 100
+        self.show_setpoint = True
 
-        self.plot = MeshLinePlot(color=[1, 0, 0, 1]) # , line_width=2) #, color=[1, 0, 0, 1])
+        self.plot = LinePlot(color=[0, 0, 1, 1], line_width=2) #, color=[1, 0, 0, 1])
         x = [x for x in range(0,101)]
+
         y = [random() for x in range (0,101)]
         #self.plot.points  = [(x, random()) for x in range(0, 101)]
         plot_data = list(zip(x, self._temp))
+        #plot_data = list(zip(self._time, self._temp))
+
         self.plot.points = plot_data
         self.add_plot(self.plot)
+
+        if self.show_setpoint:
+            self.setpoint_plot = LinePlot(color=[1, 0, 0, 1], line_width=2) #, color=[1, 0, 0, 1])
+            self.setpoint_plot.points = plot_data
+            self.add_plot(self.setpoint_plot)
 
     def add_datapoint(self, t, temp):
         pass
@@ -281,8 +301,10 @@ class Homebrew(BoxLayout):
         super(BoxLayout, self).__init__(**kwargs)
         self.temp = 0
         self._updateTempInt = 2
+        self.add_mode = 'Simulation mode'
         Clock.schedule_once(self.update_txt, 0.1)
         self.isRunning = False
+        self.connected = False
 
     def update_txt(self, *args):
         print('Kp = ', settings["Kp"])
@@ -303,19 +325,73 @@ class Homebrew(BoxLayout):
         self.ids.pid_w.ids.sl_Kd.max = settings["Kd_max"]
 
     def connect(self):
+        print('App mode = ', self.app_mode)
+        print('Attempting to connect!')
 
-        print("Trying to connect to controller with accesstoken {} and deviceID {}".format(accessToken, deviceID))
-        result = controller.connect(accessToken=accessToken, deviceID=deviceID)
+        message = ''
+        result = False
+
+        result, message = controller.connect(port=port)
 
         if result == True:
-            print('Connected!')
+            self.connected = True
+            self.controller = controller
+            #controller.power = 0
+            #controller.period = 1000
         else:
             print("Not able to connect!")
+            print('Result: ', result)
+            print('Message: ', message)
+            self.connected = False
 
-        controller.power = 50
-        controller.period = 1000
-
-        #todo start checking connection heartbeat
+        # if self.app_mode == 'Simulation mode':
+        #     controller = BC.Simulator()
+        #     result, message = controller.connect()
+        #     print('Result: ', result)
+        #     print('Message: ', message)
+        #     if result == True:
+        #         self.controller = controller
+        #         self.connected = True
+        #
+        # elif self.app_mode == 'Particle cloud':
+        #     controller = BC.ParticleCloud()
+        #     print("Trying to connect to controller with accesstoken {} and deviceID {}".format(accessToken, deviceID))
+        #     result, messsage = controller.connect(accessToken=accessToken, deviceID=deviceID)
+        #     if result == True:
+        #         print('Result: ', result)
+        #         print('Message: ', message)
+        #         self.connected = True
+        #         self.controller = controller
+        #         controller.power = 50
+        #         controller.period = 1000
+        #     else:
+        #         print("Not able to connect!")
+        #         print('Result: ', result)
+        #         print('Message: ', message)
+        #         self.connected = False
+        #
+        # elif self.app_mode == 'USB/serial':
+        #     controller = BC.ParticleSerial()
+        #     result, message = controller.connect(port=port)
+        #     if result == True:
+        #         self.connected = True
+        #         self.controller = controller
+        #         #controller.power = 0
+        #         #controller.period = 1000
+        #     else:
+        #         print("Not able to connect!")
+        #         print('Result: ', result)
+        #         print('Message: ', message)
+        #         self.connected = False
+        # else:
+        #     raise Exception('Unknown app mode: ', self.app_mode)
+        #
+        # #todo start checking connection heartbeat
+        #
+        # if self.connected == True:
+        #     btn = self.ids['btn_connect']
+        #     btn.background_color = [0,1,0,1]
+        #     #btn.text = 'Disconnect ...'
 
 
 
@@ -323,12 +399,13 @@ class Homebrew(BoxLayout):
         # todo: enable time widget on start
 
         if not self.isRunning:
-            result = controller.start()
+            result = self.controller.start()
             log.start_logging()
             print('Start result = ', result)
             self.isRunning = True
             self.ids.time_w.start_time = datetime.now()
             print('Starting mash at: ', self.ids.time_w.start_time)
+            #todo Clock waits for the function to return.
             Clock.schedule_interval(self.update, updatePIDInt)
         else:
             print('Already running!')
@@ -337,7 +414,7 @@ class Homebrew(BoxLayout):
         # todo disable time widget on stop
 
         if self.isRunning:
-            result = controller.stop()
+            result = self.controller.stop()
             print('Stop result = ', result)
             self.stop_time = datetime.now()
             print('Stoping mash at: ', self.stop_time)
@@ -348,32 +425,37 @@ class Homebrew(BoxLayout):
 
     def _update(self):
 
-        print('Starting _update')
+        #print('Starting _update')
         start = time.time()
-
-        result = controller.updateTemp()
-        t = controller.readTemp()
-        if t != -127:
-            self.temp_widget.update_temp(t)
+        if self.app_mode == 'Particle USB/Serial':
+            t = self.controller.readTemp()
+            print('T = ', t)
             self.temp = t
         else:
-            print('t = ', t)
-        print('t = ', t)
+            result = self.controller.updateTemp()
+            t = self.controller.readTemp()
+            if t != -127:
+                self.temp_widget.update_temp(t)
+                self.temp = t
+            else:
+                print('t = ', t)
+            #print('t = ', t)
 
         setpoint = self.temp_widget.setpoint
         #print("setpoint: ", setpoint)
         pid.setpoint = setpoint
 
-        print('------------')
-        print(self.pwm_widget.override)
+        #print('------------')
+        #print(self.pwm_widget.override)
         if self.pwm_widget.override:
             power = self.pwm_widget.power
-            controller.power = power
+            print('Power =  ', power)
+            self.controller.power = power
         else:
             power = int(pid(self.temp))
             print("power: ", power)
             self.pwm_widget.power = power
-            controller.power = power
+            self.controller.power = power
 
         timestamp = datetime.now()
 
@@ -387,34 +469,37 @@ class Homebrew(BoxLayout):
 
 
         end = time.time()
-        print('Update duration: ', end - start)
+        #print('Update duration: ', end - start)
 
 
     def update(self, dt):
-        update_thread = threading.Thread(name='Update', target=self._update())
-        print('starting thread')
+        update_thread = threading.Thread(name='Update', target=self._update)
+        #print('starting thread')
         update_thread.start()
+        #print('Returned from thread')
 
     def update_time(self, dt):
         self.ids.time_w.update()
 
     def updateTemp(self, dt):
-        print('update_temp')
+        #('update_temp')
         tempThread = threading.Thread(name='TempThread', target=self._updateTemp())
         tempThread.start()
 
     def _updateTemp(self):
-        print('_updateTemp')
-        print('Calling update temp)')
-        result = controller.updateTemp()
-        print('Calling readTemp')
-        t = controller.readTemp()
+        #('_updateTemp')
+        #print('Calling update temp)')
+        if self.app_mode != 'Particle USB/Serial':
+            result = self.controller.updateTemp()
+        #print('Calling readTemp')
+        t = self.controller.readTemp()
         if t != -127:
-            self.temp_widget.update_temp(t)
+            #self.temp_widget.update_temp(t)
             self.temp = t
         else:
-            print('t = ', t)
-        print('t = ', t)
+            pass
+            #print('t = ', t)
+        #print('t = ', t)
 
     def auto_scale(self, instance, value):
 
@@ -425,6 +510,16 @@ class Homebrew(BoxLayout):
 
     def change_appmode(self, txt):
         print('change_appmode:', txt)
+
+        if txt == 'Simulation mode':
+            pass
+        elif txt == 'Particle cloud':
+            pass
+        elif txt == 'Particle USB/Serial':
+            pass
+
+        self.app_mode = txt
+
 
 class HomebrewApp(App):
     def build(self):
@@ -449,7 +544,7 @@ class HomebrewApp(App):
     def on_stop(self):
         print('On Stop!!')
         print("Stopping the controller!")
-        controller.stop()
+        self.controller.stop()
         #todo do more tidying up when closing the app
 
 
