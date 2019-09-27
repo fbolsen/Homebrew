@@ -130,7 +130,7 @@ int setDutyCycle(String p) {
     }
 
     Serial.printlnf("dutyCycle int = %d", dutyCycle);
-    //setDutyCycleMillis();
+    setDutyCycleMillis();
 }
 
 

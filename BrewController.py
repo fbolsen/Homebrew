@@ -5,6 +5,7 @@ import serial
 import threading
 import ast
 import re
+import time
 
 
 from abc import ABCMeta, abstractmethod
@@ -102,7 +103,7 @@ class ParticleSerial():
             i = result.find("tempC = ")
             if i>=0:
                 try:
-                    value = re.findall("\d+\.\d+", result)
+                    value = re.findall("-?\d+\.\d+", result)
                     print("Temp = ", value[0])
                     self._temp = float(value[0])
                 except ValueError:
@@ -158,7 +159,7 @@ class ParticleSerial():
     def updateTemp(self):
 
         try:
-            result = self.__callFunction(funcName='RequestTemp', params='dummy')
+            result = self.__callFunction(funcName='requestTemp', params='dummy')
         except:
             raise ValueError()
         return result
@@ -430,7 +431,9 @@ class ParticleCloud():
 
 class Simulator(BaseClass):
 
-    def __init__(self):
+    cp = 4186 #joule per kilogram
+
+    def __init__(self, mode='kettle'):
 
         self._accessToken = ''
         self._deviceId = ''
@@ -438,6 +441,11 @@ class Simulator(BaseClass):
         self._running = False
         self._period = DEFAULT_PERIOD
         self._power = MIN_POWER
+        self.mode = mode
+        self.volume = 25
+        self.t_air = 20
+        self._temp = 20
+        self.loss_factor = 3500*0.13/(67-20) #Joule per sec and C
 
     def connect(self, accessToken='', deviceID=''):
 
@@ -450,18 +458,29 @@ class Simulator(BaseClass):
     def updateTemp(self):
         return {'ok':True}
 
-    def readTemp(self):
+    def readTemp(self, dt=1, pwr=0):
 
-        period = 20 #period in seconds
-        amplitude = 5 #AC amplitude
-        base = 30 #DC amplitude
+        if self.mode =='sin':
+            period = 20 #period in seconds
+            amplitude = 5 #AC amplitude
+            base = 30 #DC amplitude
 
-        phase = math.remainder(time.time(), period) / period
-        value = math.sin(2*math.pi*phase)
+            phase = math.remainder(time.time(), period) / period
+            value = math.sin(2*math.pi*phase)
 
-        result = base + amplitude*value
-        self._temp = result
-        return result
+            result = base + amplitude*value
+            self._temp = result
+            return result
+        elif self.mode == 'kettle':
+            temp_gain = pwr*3500*dt/(self.cp*self.volume)
+            temp_loss = self.loss_factor*(self._temp-self.t_air)*dt/(self.cp)
+            temp = self._temp + temp_gain - temp_loss
+            print('temp_gain = ', temp_gain)
+            print('temp_loss = ', temp_loss)
+            self._temp = temp
+            return temp
+        else:
+            raise ValueError('Unknown mode: ', self.mode)
 
     @property
     def is_connected(self):

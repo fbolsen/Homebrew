@@ -41,21 +41,22 @@ import temp_logger as tl
 import threading
 
 from simple_pid import PID
+from pidpy import pidpy
+
 import BrewController as BC
 #todo det ser ut som udatePIDInt styrer oppderingsfrekvensen for plot
 updatePIDInt = 1
-updateTempInt = 1
 
 
 credentials_fn = "particle credentials.json"
 credentials = tl.read_credentials()
 accessToken = credentials["accessToken"]
 deviceID = credentials["deviceID"]
-port = '/dev/tty.usbmodem14301'
-
+# = '/dev/tty.usbmodem14301'
+port = '/dev/tty.usbmodem14501'
 #controller = BC.Particle()
 #controller = BC.Simulator()
-controller = BC.ParticleSerial()
+#controller = BC.ParticleSerial()
 #controller = object()
 
 
@@ -165,8 +166,8 @@ class MyGraph(Graph):
         self.y_grid = True
         self.xmin = -0
         self.xmax = self._num_datapoints
-        self.ymin = 0
-        self.ymax = 100
+        self.ymin = 20
+        self.ymax = 80
         self.show_setpoint = True
 
         self.plot = LinePlot(color=[0, 0, 1, 1], line_width=2) #, color=[1, 0, 0, 1])
@@ -212,6 +213,31 @@ class TempWidget(BoxLayout):
             pass
         print(self.setpoint)
 
+class PID_C_Widget(BoxLayout):
+    # kc, ti, td
+    kc = NumericProperty()
+    ti = NumericProperty()
+    td = NumericProperty()
+
+    def update_kc(self):
+        self.kc = self.ids.sl_kc.value
+        pid.kc = self.kc
+
+    def update_ti(self):
+        self.ti = self.ids.sl_ti.value
+        pid.ti = self.ti
+
+    def update_td(self):
+        self.td = self.ids.sl_td.value
+        pid.td = self.td
+
+    def pid_reset(self):
+        self.ids.lbl_kc.text = "{0:.6g}".format(settings["k_c"])
+        self.ids.sl_kc.value = settings["kc"]
+        self.ids.lbl_ti.text = "{0:.6g}".format(settings["t_i"])
+        self.ids.sl_ti.value = settings["t_i"]
+        self.ids.lbl_td.text = "{0:.6g}".format(settings["t_d"])
+        self.ids.sl_td.value = settings["t_d"]
 
 class PIDWidget(BoxLayout):
     Kp = NumericProperty()
@@ -305,24 +331,26 @@ class Homebrew(BoxLayout):
         Clock.schedule_once(self.update_txt, 0.1)
         self.isRunning = False
         self.connected = False
+        self._power = 0
 
     def update_txt(self, *args):
-        print('Kp = ', settings["Kp"])
 
-        self.ids.pid_w.ids.lbl_Kp.text = "{0:.6g}".format(settings["Kp"])
-        self.ids.pid_w.ids.sl_Kp.value = settings["Kp"]
-        self.ids.pid_w.ids.sl_Kp.min = settings["Kp_min"]
-        self.ids.pid_w.ids.sl_Kp.max = settings["Kp_max"]
+        # self.ids.pid_w.ids.lbl_Kp.text = "{0:.6g}".format(settings["Kp"])
+        # self.ids.pid_w.ids.sl_Kp.value = settings["Kp"]
+        # self.ids.pid_w.ids.sl_Kp.min = settings["Kp_min"]
+        # self.ids.pid_w.ids.sl_Kp.max = settings["Kp_max"]
+        #
+        # self.ids.pid_w.ids.lbl_Ki.text = "{0:.6g}".format(settings["Ki"])
+        # self.ids.pid_w.ids.sl_Ki.value = settings["Ki"]
+        # self.ids.pid_w.ids.sl_Ki.min = settings["Ki_min"]
+        # self.ids.pid_w.ids.sl_Ki.max = settings["Ki_max"]
+        #
+        # self.ids.pid_w.ids.lbl_Kd.text = "{0:.6g}".format(settings["Kd"])
+        # self.ids.pid_w.ids.sl_Kd.value = settings["Kd"]
+        # self.ids.pid_w.ids.sl_Kd.min = settings["Kd_min"]
+        # self.ids.pid_w.ids.sl_Kd.max = settings["Kd_max"]
 
-        self.ids.pid_w.ids.lbl_Ki.text = "{0:.6g}".format(settings["Ki"])
-        self.ids.pid_w.ids.sl_Ki.value = settings["Ki"]
-        self.ids.pid_w.ids.sl_Ki.min = settings["Ki_min"]
-        self.ids.pid_w.ids.sl_Ki.max = settings["Ki_max"]
-
-        self.ids.pid_w.ids.lbl_Kd.text = "{0:.6g}".format(settings["Kd"])
-        self.ids.pid_w.ids.sl_Kd.value = settings["Kd"]
-        self.ids.pid_w.ids.sl_Kd.min = settings["Kd_min"]
-        self.ids.pid_w.ids.sl_Kd.max = settings["Kd_max"]
+        pass
 
     def connect(self):
         print('App mode = ', self.app_mode)
@@ -331,60 +359,51 @@ class Homebrew(BoxLayout):
         message = ''
         result = False
 
-        result, message = controller.connect(port=port)
 
-        if result == True:
-            self.connected = True
-            self.controller = controller
-            #controller.power = 0
-            #controller.period = 1000
-        else:
-            print("Not able to connect!")
+        if self.app_mode == 'Simulation mode':
+            controller = BC.Simulator(mode='kettle')
+            result, message = controller.connect()
             print('Result: ', result)
             print('Message: ', message)
-            self.connected = False
+            if result == True:
+                self.controller = controller
+                self.connected = True
 
-        # if self.app_mode == 'Simulation mode':
-        #     controller = BC.Simulator()
-        #     result, message = controller.connect()
-        #     print('Result: ', result)
-        #     print('Message: ', message)
-        #     if result == True:
-        #         self.controller = controller
-        #         self.connected = True
-        #
-        # elif self.app_mode == 'Particle cloud':
-        #     controller = BC.ParticleCloud()
-        #     print("Trying to connect to controller with accesstoken {} and deviceID {}".format(accessToken, deviceID))
-        #     result, messsage = controller.connect(accessToken=accessToken, deviceID=deviceID)
-        #     if result == True:
-        #         print('Result: ', result)
-        #         print('Message: ', message)
-        #         self.connected = True
-        #         self.controller = controller
-        #         controller.power = 50
-        #         controller.period = 1000
-        #     else:
-        #         print("Not able to connect!")
-        #         print('Result: ', result)
-        #         print('Message: ', message)
-        #         self.connected = False
-        #
-        # elif self.app_mode == 'USB/serial':
-        #     controller = BC.ParticleSerial()
-        #     result, message = controller.connect(port=port)
-        #     if result == True:
-        #         self.connected = True
-        #         self.controller = controller
-        #         #controller.power = 0
-        #         #controller.period = 1000
-        #     else:
-        #         print("Not able to connect!")
-        #         print('Result: ', result)
-        #         print('Message: ', message)
-        #         self.connected = False
-        # else:
-        #     raise Exception('Unknown app mode: ', self.app_mode)
+        elif self.app_mode == 'Particle cloud':
+            controller = BC.ParticleCloud()
+            print("Trying to connect to controller with accesstoken {} and deviceID {}".format(accessToken, deviceID))
+            result, messsage = controller.connect(accessToken=accessToken, deviceID=deviceID)
+            if result == True:
+                print('Result: ', result)
+                print('Message: ', message)
+                self.connected = True
+                self.controller = controller
+                controller.power = 50
+                controller.period = 1000
+            else:
+                print("Not able to connect!")
+                print('Result: ', result)
+                print('Message: ', message)
+                self.connected = False
+
+        elif self.app_mode == 'USB/serial':
+            controller = BC.ParticleSerial()
+            result, message = controller.connect(port=port)
+            if result == True:
+                self.connected = True
+                self.controller = controller
+                # controller.power = 0
+                # controller.period = 1000
+            else:
+                print("Not able to connect!")
+                print('Result: ', result)
+                print('Message: ', message)
+                self.connected = False
+
+        else:
+            raise Exception('Unknown app mode: ', self.app_mode)
+
+
         #
         # #todo start checking connection heartbeat
         #
@@ -394,6 +413,14 @@ class Homebrew(BoxLayout):
         #     #btn.text = 'Disconnect ...'
 
 
+    def set_ymax(self, control,  txt):
+        print('set_ymax: ', txt)
+        self.ids.temp_graph.ymax = float(txt)
+
+
+    def set_ymin(self,control, txt):
+        print('set_ymin: ', txt)
+        self.ids.temp_graph.ymin = float(txt)
 
     def start_mash(self):
         # todo: enable time widget on start
@@ -431,6 +458,11 @@ class Homebrew(BoxLayout):
             t = self.controller.readTemp()
             print('T = ', t)
             self.temp = t
+        elif self.app_mode == 'Simulation mode':
+            t = self.controller.readTemp(pwr=self._power, dt=updatePIDInt)
+            self.temp_widget.update_temp(t)
+            self.temp = t
+            print('T = ', t)
         else:
             result = self.controller.updateTemp()
             t = self.controller.readTemp()
@@ -442,8 +474,14 @@ class Homebrew(BoxLayout):
             #print('t = ', t)
 
         setpoint = self.temp_widget.setpoint
-        #print("setpoint: ", setpoint)
-        pid.setpoint = setpoint
+
+        if PID_TYPE =='SIMPLE':
+            pid.setpoint = setpoint
+            power = int(pid(self.temp))
+        elif PID_TYPE =='type_C':
+            power = pid.calcPID_reg4(self.temp,setpoint, enable=True)
+
+        self._power = power
 
         #print('------------')
         #print(self.pwm_widget.override)
@@ -452,7 +490,7 @@ class Homebrew(BoxLayout):
             print('Power =  ', power)
             self.controller.power = power
         else:
-            power = int(pid(self.temp))
+            #power = int(pid(self.temp))
             print("power: ", power)
             self.pwm_widget.power = power
             self.controller.power = power
@@ -569,18 +607,39 @@ if __name__ == '__main__':
 
     log = tl.LogFile()
 
+    PID_TYPE = 'SIMPLE'
 
     settings_fn = "settings.json"
-    settings = read_settings(settings_fn)
 
-    pid_tunings = ((settings["Kp"], settings["Ki"], settings["Kd"]))
 
-    pid = PID()
-    pid.sample_time = updatePIDInt # settings["sample_time"]
-    pid.output_limits = (0, 100)
-    pid.tunings = pid_tunings
-    pid.setpoint = 20.0
+    if PID_TYPE == 'SIMPLE':
+        print("PID_TYPE = ", PID_TYPE)
+        #settings_fn = "settings.json"
+        settings = read_settings(settings_fn)["simple_pid"]
 
-    print(pid.tunings)
+        pid_tunings = ((settings["Kp"], settings["Ki"], settings["Kd"]))
+
+        pid = PID()
+        pid.sample_time = updatePIDInt # settings["sample_time"]
+        pid.output_limits = (0, 100)
+        pid.tunings = pid_tunings
+        pid.setpoint = 20.0
+
+        print(pid.tunings)
+
+    elif PID_TYPE == 'TYPE C':
+        print("PID_TYPE = ", PID_TYPE)
+        settings = read_settings(settings_fn)["type_c"]
+
+        pid = pidpy(ts=updatePIDInt,
+                    kc=settings['kc'],
+                    ti=settings['ti'],
+                    td = settings['td'],
+                    )
+
+
+
+    else:
+        raise ValueError("Unknown PID type: " + PID_TYPE)
 
     HomebrewApp().run()
