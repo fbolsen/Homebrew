@@ -25,7 +25,7 @@ bool doPWM = FALSE;
 bool doReadSerial = TRUE;
 int doPWM_int = 0;
 
-int period = 1000;
+int period = 2000;
 int dutyCycle = 0;
 int dutyCycleMillis = 0;
 

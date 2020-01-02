@@ -1,3 +1,5 @@
+import time
+
 
 class pidpy(object):
     ek_1 = 0.0  # e[k-1] = SP[k-1] - PV[k-1] = Tset_hlt[k-1] - Thlt[k-1]
@@ -14,7 +16,7 @@ class pidpy(object):
     GMA_HLIM = 100.0
     GMA_LLIM = 0.0
 
-    def __init__(self, ts, kc, ti, td):
+    def __init__(self, ts, kc, ti, td, debug=False):
         self.kc = kc
         self.ti = ti
         self.td = td
@@ -31,6 +33,12 @@ class pidpy(object):
         self.pp = 0.0
         self.pi = 0.0
         self.pd = 0.0
+        if debug:
+            print('ts = ', ts)
+            print('kc = ', kc)
+            print('ti = ', ti)
+            print('td = ', td)
+
         if (self.ti == 0.0):
             self.k0 = 0.0
         else:
@@ -77,9 +85,17 @@ class pidpy(object):
 
         return pidpy.yk
 
-    def calcPID_reg4(self, xk, tset, enable):
+    def calcPID_reg4(self, xk, tset, enable, debug=False):
+
+        if debug:
+            print('Inside calcPID_reg4')
+            print('xk = ', xk)
+            print('tset = ', tset)
+
         ek = 0.0
         ek = tset - xk  # calculate e[k] = SP[k] - PV[k]
+
+        first_iteration = True
 
         if (enable):
             # -----------------------------------------------------------
@@ -88,9 +104,21 @@ class pidpy(object):
             # Ts*e[k]/Ti +
             # Td/Ts*(2*PV[k-1] - PV[k] - PV[k-2]))
             # -----------------------------------------------------------
+
+            if first_iteration:
+                pidpy.xk_1 = xk
+                pidpy.xk_2 = pidpy.xk_1
+                first_iteration = False
+
             self.pp = self.kc * (pidpy.xk_1 - xk)  # y[k] = y[k-1] + Kc*(PV[k-1] - PV[k])
             self.pi = self.k0 * ek  # + Kc*Ts/Ti * e[k]
-            self.pd = self.k1 * (2.0 * pidpy.xk_1 - xk - pidpy.xk_2)
+            self.pd = self.k1 * (2.0 * pidpy.xk_1 - xk - pidpy.xk_2) #
+
+            if debug:
+                print('pp = ', self.pp)
+                print('pi = ', self.pi)
+                print('pd = ', self.pd)
+
             pidpy.yk += self.pp + self.pi + self.pd
         else:
             pidpy.yk = 0.0
@@ -111,11 +139,19 @@ class pidpy(object):
 
 
 if __name__ == "__main__":
+
+    #temps = [22.0, 22.5, 23, 23.5, 23.5, 24, 24.3, 25, 25, 25, 25, 25, 25, 24.6, 24, 25]
+    #temps1 = [24]*5
+    #temps2 = [25]*10
+    #temps = temps1+temps2
+    temps = [20]*10
     sampleTime = 2
-    pid = pidpy(sampleTime, 0, 0, 0)
-    temp = 80
-    setpoint = 80
+
+    pid = pidpy(sampleTime, 150, 230, 57)
+    temp = 5
+    setpoint = 20
     enable = True
-    print(pid.calcPID_reg4(temp, setpoint, enable))
 
-
+    for index in range(len(temps)):
+        print(pid.calcPID_reg4(temps[index], setpoint, enable))
+        time.sleep(sampleTime)

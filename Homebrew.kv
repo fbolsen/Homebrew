@@ -1,4 +1,5 @@
 #:kivy 1.0.9
+
 <MyGraph>:
 
 <RadioButton@ToggleButton>:
@@ -55,53 +56,6 @@
         Label:
             id: lbl_temp
             text: "{0:.2f}".format(root.temp)
-<PID_C_Widget>:
-    #orientation: 'horizontal'
-    #size_hint: (None, 1.0)
-    #BoxLayout:
-    orientation: 'vertical'
-    size_hint: (None, 1.0)
-    width: 800
-    BoxLayout:
-        Label:
-            text: 'kc:'
-        Label:
-            id: lbl_kc
-            text: "{0:.6g}".format(root.kc)
-        Slider:
-            id: sl_kc
-            min: 0.0
-            max: 100.0
-            value: 5.0
-            on_value: root.update_kc()
-    BoxLayout:
-        Label:
-            text: 't_i:'
-        Label:
-            id: lbl_ti
-            text: "{0:.6g}".format(root.ti)
-        Slider:
-            id: sl_ti
-            min: 0.0
-            max: 100.0
-            value: 25.0
-            on_value: root.update_ti()
-    BoxLayout:
-        Label:
-            text: 't_d:'
-        Label:
-            id: lbl_td
-            text: "{0:.6g}".format(root.td)
-        Slider:
-            id: sl_td
-            min: 0.0
-            max: 100.0
-            value: 25.0
-            on_value: root.update_td()
-    Button:
-        id: pid_reset
-        text: 'Reset'
-        on_press: root.pid_reset()
 
 <PIDWidget>:
     #orientation: 'horizontal'
@@ -110,6 +64,7 @@
     orientation: 'vertical'
     size_hint: (None, 1.0)
     width: 800
+
     BoxLayout:
         Label:
             text: 'Kp:'
@@ -120,7 +75,7 @@
             id: sl_Kp
             min: 0.0
             max: 100.0
-            value: 5.0
+            value: root.Kp
             on_value: root.update_Kp()
     BoxLayout:
         Label:
@@ -132,7 +87,7 @@
             id: sl_Ki
             min: 0.0
             max: 100.0
-            value: 25.0
+            value: root.Ki
             on_value: root.update_Ki()
     BoxLayout:
         Label:
@@ -144,8 +99,20 @@
             id: sl_Kd
             min: 0.0
             max: 100.0
-            value: 25.0
+            value: root.Kd
             on_value: root.update_Kd()
+    BoxLayout:
+        Label:
+            text: 'Bias:'
+        Label:
+            id: lbl_Bias
+            text: "{0:.6g}".format(root.Bias)
+        Slider:
+            id: sl_Bias
+            min: 0.0
+            max: 100.0
+            value: 0.0
+            on_value: root.update_Bias()
     Button:
         id: pid_reset
         text: 'Reset'
@@ -175,18 +142,9 @@
         orientation: 'horizontal'
         Label:
             text: 'Power:'
-            #canvas.before:
-                #Color:
-                #    rgba: 1, .5, 0, 1
-            #    Rectangle:
-            #        pos: self.pos
-            #        size: self.size
         Label:
             id: lbl_power
             text: "{0:.2f}".format(root.power)
-            #background_normal: ''
-            #background_color: 1,1,0,1
-            #color: 0,1,0,1 #text color
     Slider:
         id: sl_power
         min: 0.0
@@ -286,8 +244,7 @@
         orientation: 'horizontal'
         id: bl_bottom
         size_hint: (1.0, 0.1)
-        #PIDWidget:
-        PID_C_Widget:
+        PIDWidget:
             id: pid_w
         PWMWidget:
             id: pwm_w
